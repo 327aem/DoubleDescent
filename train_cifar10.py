@@ -7,6 +7,7 @@ from archs.cifar10 import vgg, resnet
 import numpy as np
 import random
 import os
+from tqdm import tqdm
 import wandb
 
 import os
@@ -20,7 +21,8 @@ parser.add_argument('--train_batch_size', type=int, default=128, help='train_bat
 parser.add_argument('--train_epoch', type=int, default=4000, help='train_epoch')
 parser.add_argument('--eval_batch_size', type=int, default=256, help='eval_batch_size')
 parser.add_argument('--label_noise', type=float, default=0.15, help='label_noise')
-parser.add_argument('--num_noised_class', type=int, default=10, help='The number of classes that will receive noise. (0 < num_noised_class <= # class)')
+parser.add_argument('--num_noised_class', type=int, default=8, help='The number of classes that will receive noise. (0 < num_noised_class <= # class)')
+parser.add_argument('--img_noise', type=str, default=None, help='None , Partial , All')
 parser.add_argument('--k', type=int, default=64, help='1 to k iteration')
 
 args = parser.parse_args()
@@ -36,24 +38,48 @@ cfg = {
 "model" : args.model_name,
 "dataset" : args.data_name,
 "learning_rate": args.lr,
-"label_noise": args.label_noise
+"label_noise": args.label_noise,
+"num_noised_class": args.num_noised_class,
+"img_noise": args.img_noise,
 }
 wandb.config.update(cfg)
 
-wandb.run.name = f'{args.model_name}_{args.data_name}_ln{args.label_noise}'
+wandb.run.name = f'{args.model_name}_{args.data_name}_ln{args.label_noise}_nc:{args.num_noised_class}_{args.img_noise}'
 wandb.run.save()
 
-###### ###### ######
+####################
+
+def gauss_noise_tensor(img):
+    assert isinstance(img, torch.Tensor)
+    dtype = img.dtype
+    if not img.is_floating_point():
+        img = img.to(torch.float32)
+    
+    sigma = 25.0
+    
+    out = img + sigma * torch.randn_like(img)
+    
+    if out.dtype != dtype:
+        out = out.to(dtype)
+        
+    return out
 
 dataset = datasets.CIFAR10
+noise_transform = transforms.Compose([
+                                gauss_noise_tensor,
+                                ])
 train_transform = transforms.Compose([transforms.RandomCrop(32, padding=4),
-                                    transforms.RandomHorizontalFlip(),
-                                    transforms.ToTensor()])
-
+                                transforms.RandomHorizontalFlip(),
+                                transforms.ToTensor()])
+train_noise_transform = transforms.Compose([transforms.RandomCrop(32, padding=4),
+                                transforms.RandomHorizontalFlip(),
+                                transforms.ToTensor(),
+                                gauss_noise_tensor,])
 eval_transform = transforms.Compose([transforms.ToTensor()])
 
 
 for k in range(1,65):
+    print(f"\nTrain K={k} Start!\n")
     if args.model_name == 'vgg16':
         model = vgg.vgg16_bn()
     elif args.model_name == 'resnet':
@@ -62,7 +88,11 @@ for k in range(1,65):
         raise Exception("No such model!")
 
     # load data
-    train_data = dataset(f'{data_dir}', train=True, transform=train_transform,download=True)
+    if args.img_noise == "All":
+        train_data = dataset(f'{data_dir}', train=True, transform=train_noise_transform,download=True)
+    else : 
+        train_data = dataset(f'{data_dir}', train=True, transform=train_transform,download=True)
+
     train_targets = np.array(train_data.targets)
     data_size = len(train_targets)
 
@@ -74,13 +104,14 @@ for k in range(1,65):
     assert args.num_noised_class > 0, "num_noised_class must be greater than 0."
     num_random_elements = int(data_size*args.label_noise) # number of elements that should be noised
 
+
+    ### All Dataset Labels are noised ###
     if args.num_noised_class == num_class:
         random_index = random.sample(range(data_size), num_random_elements)
         random_part = train_targets[random_index]
         np.random.shuffle(random_part)
         train_targets[random_index] = random_part
         train_data.targets = train_targets.tolist()
-
         noise_data = dataset(f'{data_dir}', train=True, transform=train_transform)
         noise_data.targets = random_part.tolist()
         noise_data.data = train_data.data[random_index]
@@ -100,10 +131,20 @@ for k in range(1,65):
 
         random_index = random.sample(candidate_random_index, num_random_elements)
         random_part = train_targets[random_index]
+
+        if args.img_noise == "Partial":
+            random_img = train_data.data[random_index] # Select image in noised classes
+            # Add Gaussian Noise only about selected noise classes
+            for idx,img in enumerate(random_img):
+                img = noise_transform(torch.tensor(img))
+                random_img[idx] = img
+        
         random_part = np.array(random_part)
         np.random.shuffle(random_part)
         train_targets[random_index] = random_part
         train_data.targets = train_targets.tolist()
+        if args.img_noise == "Partial":
+            train_data.data[random_index] = random_img
 
         noise_data = dataset(f'{data_dir}', train=True, transform=train_transform)
         noise_data.targets = random_part.tolist()
@@ -135,20 +176,12 @@ for k in range(1,65):
     itr_index = 1
     wrapper.train()
 
-    for id_epoch in range(args.train_epoch):
+    for id_epoch in tqdm(range(args.train_epoch)):
         # train loop
 
         for id_batch, (inputs, targets) in enumerate(train_loader):
 
             loss, acc, _ = wrapper.train_on_batch(inputs, targets)
-            print("epoch:{}/{}, batch:{}/{}, loss={}, acc={}".
-                format(id_epoch+1, args.train_epoch, id_batch+1, len(train_loader), loss, acc))
-            # if itr_index % 20 == 0:
-                # wandb.log({
-                #     "train acc" : acc}, step = itr_index)
-                # wandb.log({
-                #     "train loss" : loss}, step = itr_index)
-
             itr_index += 1
 
         wrapper.eval()
@@ -158,14 +191,6 @@ for k in range(1,65):
         print("clean: loss={}, acc={}".format(test_loss, test_acc))
         print("noise: loss={}, acc={}".format(noise_loss, noise_acc))
         print()
-        # wandb.log({
-        #             "test acc" : test_acc}, step = itr_index)
-        # wandb.log({
-        #             "test loss" : test_loss}, step = itr_index)
-        # wandb.log({
-        #             "noise acc" : noise_acc}, step = itr_index)
-        # wandb.log({
-        #             "noise loss" : noise_loss}, step = itr_index)
 
         state = {
             'net': model.state_dict(),
@@ -183,8 +208,9 @@ for k in range(1,65):
     print("epoch:{}/{}, batch:{}/{}, testing...".format(id_epoch + 1, args.train_epoch, id_batch + 1, len(train_loader)))
     print("clean: loss={}, acc={}".format(test_loss, test_acc))
     print("noise: loss={}, acc={}".format(noise_loss, noise_acc))
-    wandb.log({"DD_test acc" : result_test_acc}, step = k)
-    wandb.log({"DD_test loss" : result_test_loss}, step = k)
-    wandb.log({"DD_noise acc" : result_noise_loss}, step = k)
-    wandb.log({"DD_noise loss" : result_noise_acc}, step = k)
 
+    ###### wandb ######
+    # wandb.log({"DD_test acc" : result_test_acc}, step = k)
+    # wandb.log({"DD_test loss" : result_test_loss}, step = k)
+    # wandb.log({"DD_noise acc" : result_noise_loss}, step = k)
+    # wandb.log({"DD_noise loss" : result_noise_acc}, step = k)
