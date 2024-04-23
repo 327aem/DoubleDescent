@@ -21,7 +21,7 @@ parser.add_argument('--train_batch_size', type=int, default=128, help='train_bat
 parser.add_argument('--train_epoch', type=int, default=4000, help='train_epoch')
 parser.add_argument('--eval_batch_size', type=int, default=256, help='eval_batch_size')
 parser.add_argument('--label_noise', type=float, default=0.15, help='label_noise')
-parser.add_argument('--num_noised_class', type=int, default=8, help='The number of classes that will receive noise. (0 < num_noised_class <= # class)')
+parser.add_argument('--num_noised_class', type=int, default=10, help='The number of classes that will receive noise. (0 < num_noised_class <= # class)')
 parser.add_argument('--img_noise', type=str, default=None, help='None , Partial , All')
 parser.add_argument('--k', type=int, default=64, help='1 to k iteration')
 
