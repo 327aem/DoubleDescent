@@ -10,8 +10,6 @@ import os
 from tqdm import tqdm
 import wandb
 
-import os
-
 parser = argparse.ArgumentParser()
 # dataset part
 parser.add_argument('--data_name', type=str, default='cifar10', help='Cifar10')
