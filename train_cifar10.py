@@ -208,7 +208,7 @@ for k in range(1,65):
     print("noise: loss={}, acc={}".format(noise_loss, noise_acc))
 
     ###### wandb ######
-    # wandb.log({"DD_test acc" : result_test_acc}, step = k)
-    # wandb.log({"DD_test loss" : result_test_loss}, step = k)
-    # wandb.log({"DD_noise acc" : result_noise_loss}, step = k)
-    # wandb.log({"DD_noise loss" : result_noise_acc}, step = k)
+    wandb.log({"DD_test acc" : result_test_acc}, step = k)
+    wandb.log({"DD_test loss" : result_test_loss}, step = k)
+    wandb.log({"DD_noise acc" : result_noise_loss}, step = k)
+    wandb.log({"DD_noise loss" : result_noise_acc}, step = k)
