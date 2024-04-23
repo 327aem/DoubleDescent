@@ -24,9 +24,9 @@ length=${#model_list[@]}
 for (( i=0; i<${length}; i++ ));
 do
     python train_cifar10.py \
-        --data_name Cifar10 \
-        --model_name ${model_list[$i]} \
-        --label_noise 0.15 \
-        --batch_size 128 \
-        --num_noised_class 10
+    --data_name Cifar10 \
+    --model_name ${model_list[$i]} \
+    --label_noise 0.15 \
+    --batch_size 128 \
+    --num_noised_class 10
 done
