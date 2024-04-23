@@ -6,12 +6,11 @@
 
 #SBATCH -p 3090
 #SBATCH --gres=gpu:1
-#SBATCH --cpus-per-gpu=2
 
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --tasks-per-node=1
-#SBATCH --cpus-per-task=20
+#SBATCH --cpus-per-task=4
 
 echo "Activate conda"
 source /home/donggeonlee/miniconda3/bin/activate ddd # TO BE EDITED
