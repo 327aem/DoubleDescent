@@ -18,15 +18,13 @@ source /home/donggeonlee/miniconda3/bin/activate ddd # TO BE EDITED
 echo "Login to Wandb"
 wandb login YOUR_API_KEY # TO BE EDITED
 
-model_list=(vgg16 resnet )
-length=${#model_list[@]}
-
-for (( i=0; i<${length}; i++ ));
+for model_name in vgg16 resnet;
 do
+    echo "${model_name} training start"
     python train_cifar10.py \
     --data_name Cifar10 \
-    --model_name ${model_list[$i]} \
+    --model_name ${model_name} \
     --label_noise 0.15 \
-    --batch_size 128 \
+    --train_batch_size 128 \
     --num_noised_class 10
 done
