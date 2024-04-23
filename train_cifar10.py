@@ -15,7 +15,7 @@ import os
 parser = argparse.ArgumentParser()
 # dataset part
 parser.add_argument('--data_name', type=str, default='cifar10', help='Cifar10')
-parser.add_argument('--model_name', type=str, default='resnet', help='resnet , CNN')
+parser.add_argument('--model_name', type=str, default='resnet', help='vgg16, resnet')
 parser.add_argument('--lr', type=float, default=1e-4, help='learning rate')
 parser.add_argument('--train_batch_size', type=int, default=128, help='train_batch_size')
 parser.add_argument('--train_epoch', type=int, default=4000, help='train_epoch')
