@@ -22,7 +22,7 @@ random.seed(0)
 parser = argparse.ArgumentParser()
 # dataset part
 parser.add_argument('--data_name', type=str, default='cifar10', help='Cifar10')
-parser.add_argument('--model_name', type=str, default='resnet', help='vgg16, resnet')
+parser.add_argument('--model_name', type=str, default='resnet', help='resnet')
 parser.add_argument('--lr', type=float, default=1e-4, help='learning rate')
 parser.add_argument('--train_batch_size', type=int, default=128, help='train_batch_size')
 parser.add_argument('--train_epoch', type=int, default=1000, help='train_epoch')
@@ -237,22 +237,22 @@ for k in range(args.start_k, args.end_k+1):
     # wandb.log({"DD_noise acc" : result_noise_loss}, step = k)
     # wandb.log({"DD_loss" : result_noise_acc}, step = k)
 
-    with(f"{log_dir}/test_acc_{str(cfg)}.txt","a") as f:
+    with open(f"{log_dir}/test_acc_{str(cfg)}.txt","a") as f:
         f.write(f"{k}:{result_test_acc} , ")
     
-    with(f"{log_dir}/test_loss_{str(cfg)}.txt","a") as f:
+    with open(f"{log_dir}/test_loss_{str(cfg)}.txt","a") as f:
         f.write(f"{k}:{result_test_loss} , ")
     
-    with(f"{log_dir}/noise_acc_{str(cfg)}.txt","a") as f:
+    with open(f"{log_dir}/noise_acc_{str(cfg)}.txt","a") as f:
         f.write(f"{k}:{result_noise_acc} , ")
     
-    with(f"{log_dir}/noise_loss_{str(cfg)}.txt","a") as f:
+    with open(f"{log_dir}/noise_loss_{str(cfg)}.txt","a") as f:
         f.write(f"{k}:{result_noise_loss} , ")
     
-    with(f"{log_dir}/train_acc_{str(cfg)}.txt","a") as f:
+    with open(f"{log_dir}/train_acc_{str(cfg)}.txt","a") as f:
         f.write(f"{k}:{result_train_acc} , ")
     
-    with(f"{log_dir}/train_loss_{str(cfg)}.txt","a") as f:
+    with open(f"{log_dir}/train_loss_{str(cfg)}.txt","a") as f:
         f.write(f"{k}:{result_train_loss} , ")
 
 
