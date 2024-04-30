@@ -15,9 +15,6 @@
 echo "Activate conda"
 source /home/donggeonlee/miniconda3/bin/activate ddd # TO BE EDITED
 
-echo "Login to Wandb"
-wandb login YOUR_API_KEY # TO BE EDITED
-
 for model_name in vgg16 resnet;
 do
     echo "${model_name} training start"
@@ -26,5 +23,7 @@ do
     --model_name ${model_name} \
     --label_noise 0.15 \
     --train_batch_size 128 \
-    --num_noised_class 10
+    --num_noised_class 10 \
+    --start_k 1 \
+    --train_epoch 1000
 done
