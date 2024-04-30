@@ -8,7 +8,16 @@ import numpy as np
 import random
 import os
 from tqdm import tqdm
-import wandb
+import torch.backends.cudnn as cudnn
+# import wandb
+
+torch.manual_seed(0)
+torch.cuda.manual_seed(0)
+torch.cuda.manual_seed_all(0)
+np.random.seed(0)
+cudnn.benchmark = False
+cudnn.deterministic = True
+random.seed(0)
 
 parser = argparse.ArgumentParser()
 # dataset part
@@ -16,37 +25,51 @@ parser.add_argument('--data_name', type=str, default='cifar10', help='Cifar10')
 parser.add_argument('--model_name', type=str, default='resnet', help='vgg16, resnet')
 parser.add_argument('--lr', type=float, default=1e-4, help='learning rate')
 parser.add_argument('--train_batch_size', type=int, default=128, help='train_batch_size')
-parser.add_argument('--train_epoch', type=int, default=4000, help='train_epoch')
+parser.add_argument('--train_epoch', type=int, default=1000, help='train_epoch')
 parser.add_argument('--eval_batch_size', type=int, default=256, help='eval_batch_size')
 parser.add_argument('--label_noise', type=float, default=0.15, help='label_noise')
 parser.add_argument('--num_noised_class', type=int, default=10, help='The number of classes that will receive noise. (0 < num_noised_class <= # class)')
 parser.add_argument('--img_noise', type=str, default=None, help='None , Partial , All')
 parser.add_argument('--k', type=int, default=64, help='1 to k iteration')
+parser.add_argument('--start_k', type=int, default=1, help='k value to start')
 
 args = parser.parse_args()
 
 data_dir = "./dataset"
+log_dir = "./log"
+save_path = './runs'
+
+
+if not os.path.isdir(data_dir):
+    os.makedirs(data_dir)
+
+if not os.path.isdir(log_dir):
+    os.makedirs(log_dir)
+
+if not os.path.exists(save_path):
+    os.makedirs(save_path)
 
 # setting
+# ###### wandb ######
 
-###### wandb ######
+# wandb.init(project='DDD')
 
-wandb.init(project='DDD')
 cfg = {
 "model" : args.model_name,
 "dataset" : args.data_name,
+"batch_size": args.train_batch_size,
 "learning_rate": args.lr,
 "label_noise": args.label_noise,
 "num_noised_class": args.num_noised_class,
 "img_noise": args.img_noise,
 }
-wandb.config.update(cfg)
 
-wandb.run.name = f'{args.model_name}_{args.data_name}_ln{args.label_noise}_nc:{args.num_noised_class}_{args.img_noise}'
-wandb.run.save()
+# wandb.config.update(cfg)
+
+# wandb.run.name = f'{args.model_name}_{args.data_name}_ln{args.label_noise}_nc:{args.num_noised_class}_{args.img_noise}'
+# wandb.run.save()
 
 ####################
-
 def gauss_noise_tensor(img):
     assert isinstance(img, torch.Tensor)
     dtype = img.dtype
@@ -76,7 +99,7 @@ train_noise_transform = transforms.Compose([transforms.RandomCrop(32, padding=4)
 eval_transform = transforms.Compose([transforms.ToTensor()])
 
 
-for k in range(1,65):
+for k in range(args.start_k, args.k+1):
     print(f"\nTrain K={k} Start!\n")
     if args.model_name == 'vgg16':
         model = vgg.vgg16_bn()
@@ -166,23 +189,26 @@ for k in range(1,65):
     wrapper = ModelWrapper(model, optimizer, criterion, device)
 
     # train the model
-    save_path = os.path.join('runs', args.data_name, "{}_{}_k{}".format(args.model_name, int(args.label_noise*100), k))
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
-    np.savez(os.path.join(save_path, "label_noise.npz"), index=random_index, value=random_part)
+    np.savez(os.path.join(data_dir, f"{k}_label_noise_{str(cfg)}.npz"), index=random_index, value=random_part)
 
     itr_index = 1
     wrapper.train()
 
+    sum_loss = 0
+    sum_acc = 0
     for id_epoch in tqdm(range(args.train_epoch)):
         # train loop
+        
 
         for id_batch, (inputs, targets) in enumerate(train_loader):
 
             loss, acc, _ = wrapper.train_on_batch(inputs, targets)
             itr_index += 1
-
+            sum_loss += loss
+            sum_acc += acc
+        
         wrapper.eval()
+
         test_loss, test_acc = wrapper.eval_all(test_loader)
         noise_loss, noise_acc = wrapper.eval_all(noise_loader)
         print("epoch:{}/{}, batch:{}/{}, testing...".format(id_epoch + 1, args.train_epoch, id_batch + 1, len(train_loader)))
@@ -190,25 +216,50 @@ for k in range(1,65):
         print("noise: loss={}, acc={}".format(noise_loss, noise_acc))
         print()
 
-        state = {
-            'net': model.state_dict(),
-            'optim': optimizer.state_dict(),
-            'acc': test_acc,
-            'epoch': id_epoch,
-            'itr': itr_index
-        }
-        torch.save(state, os.path.join(save_path, "ckpt.pkl"))
+        
         # return to train state.
         wrapper.train()
+
+    result_train_loss = sum_loss / (len(train_loader) * args.train_epoch)
+    result_train_acc = sum_acc / (len(train_loader) * args.train_epoch)
     result_test_loss, result_test_acc = wrapper.eval_all(test_loader)
     result_noise_loss, result_noise_acc = wrapper.eval_all(noise_loader)
+
     print(f"#### K : {k}-Evaluation ####")
     print("epoch:{}/{}, batch:{}/{}, testing...".format(id_epoch + 1, args.train_epoch, id_batch + 1, len(train_loader)))
     print("clean: loss={}, acc={}".format(test_loss, test_acc))
     print("noise: loss={}, acc={}".format(noise_loss, noise_acc))
 
-    ###### wandb ######
-    wandb.log({"DD_test acc" : result_test_acc}, step = k)
-    wandb.log({"DD_test loss" : result_test_loss}, step = k)
-    wandb.log({"DD_noise acc" : result_noise_loss}, step = k)
-    wandb.log({"DD_noise loss" : result_noise_acc}, step = k)
+    # ###### wandb ######
+    # wandb.log({"DD_test acc" : result_test_acc}, step = k)
+    # wandb.log({"DD_test loss" : result_test_loss}, step = k)
+    # wandb.log({"DD_noise acc" : result_noise_loss}, step = k)
+    # wandb.log({"DD_loss" : result_noise_acc}, step = k)
+
+    with(f"{log_dir}/test_acc_{str(cfg)}.txt","a") as f:
+        f.write(f"{k}:{result_test_acc} , ")
+    
+    with(f"{log_dir}/test_loss_{str(cfg)}.txt","a") as f:
+        f.write(f"{k}:{result_test_loss} , ")
+    
+    with(f"{log_dir}/noise_acc_{str(cfg)}.txt","a") as f:
+        f.write(f"{k}:{result_noise_acc} , ")
+    
+    with(f"{log_dir}/noise_loss_{str(cfg)}.txt","a") as f:
+        f.write(f"{k}:{result_noise_loss} , ")
+    
+    with(f"{log_dir}/train_acc_{str(cfg)}.txt","a") as f:
+        f.write(f"{k}:{result_train_acc} , ")
+    
+    with(f"{log_dir}/train_loss_{str(cfg)}.txt","a") as f:
+        f.write(f"{k}:{result_train_loss} , ")
+
+
+    state = {
+        'net': model.state_dict(),
+        'optim': optimizer.state_dict(),
+        'acc': test_acc,
+        'epoch': id_epoch,
+        'itr': itr_index
+    }
+    torch.save(state, f"{save_path}/{k}_ckpt_{str(cfg)}.pkl")
