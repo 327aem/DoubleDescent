@@ -32,6 +32,7 @@ parser.add_argument('--num_noised_class', type=int, default=10, help='The number
 parser.add_argument('--img_noise', type=str, default=None, help='None , Partial , All')
 parser.add_argument('--k', type=int, default=64, help='1 to k iteration')
 parser.add_argument('--start_k', type=int, default=1, help='k value to start')
+parser.add_argument('--end_k', type=int, default=64, help='k value to terminate')
 
 args = parser.parse_args()
 
@@ -99,7 +100,7 @@ train_noise_transform = transforms.Compose([transforms.RandomCrop(32, padding=4)
 eval_transform = transforms.Compose([transforms.ToTensor()])
 
 
-for k in range(args.start_k, args.k+1):
+for k in range(args.start_k, args.end_k+1):
     print(f"\nTrain K={k} Start!\n")
     if args.model_name == 'vgg16':
         model = vgg.vgg16_bn()
