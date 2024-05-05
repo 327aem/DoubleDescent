@@ -8,8 +8,17 @@ import numpy as np
 import random
 import os
 from tqdm import tqdm
-import wandb
+import torch.backends.cudnn as cudnn
+# import wandb
 from utils.data_preprocessing.imbalancing import *
+
+torch.manual_seed(0)
+torch.cuda.manual_seed(0)
+torch.cuda.manual_seed_all(0)
+np.random.seed(0)
+cudnn.benchmark = False
+cudnn.deterministic = True
+random.seed(0)
 
 parser = argparse.ArgumentParser()
 # dataset part
@@ -23,6 +32,8 @@ parser.add_argument('--label_noise', type=float, default=0.15, help='label_noise
 parser.add_argument('--num_noised_class', type=int, default=10, help='The number of classes that will receive noise. (0 < num_noised_class <= # class)')
 parser.add_argument('--img_noise', type=str, default=None, help='None , Partial , All')
 parser.add_argument('--k', type=int, default=64, help='1 to k iteration')
+parser.add_argument('--start_k', type=int, default=1, help='k value to start')
+parser.add_argument('--end_k', type=int, default=64, help='k value to terminate')
 parser.add_argument('--is_lmbalance', type=bool, default=False, help='True, False')
 parser.add_argument('--imb_type', default="exp", type=str, help='imbalance type')
 parser.add_argument('--imb_factor', default=0.01, type=float, help='imbalance factor')
@@ -33,24 +44,42 @@ parser.add_argument('--extra_name', default='imbalanced', type=str, help='(addit
 args = parser.parse_args()
 
 data_dir = "./dataset"
+log_dir = "./log"
+save_path = './runs'
+# save_path = os.path.join('runs', args.data_name, "{}_{}_k{}".format(args.model_name, int(args.label_noise*100), k))
+
+if not os.path.isdir(data_dir):
+    os.makedirs(data_dir)
+
+if not os.path.isdir(log_dir):
+    os.makedirs(log_dir)
+
+if not os.path.exists(save_path):
+    os.makedirs(save_path)
 
 # setting
 
 ###### wandb ######
 
-wandb.init(project='DDD')
+# wandb.init(project='DDD')
 cfg = {
 "model" : args.model_name,
 "dataset" : args.data_name,
+"batch_size": args.train_batch_size,
 "learning_rate": args.lr,
 "label_noise": args.label_noise,
 "num_noised_class": args.num_noised_class,
 "img_noise": args.img_noise,
+"is_imbalance": args.is_imbalance,
+"imb_type": args.imb_type,
+"imb_factor": args.train_rule,
+"rand_number": args.rand_number,
+"extra_name": args.extra_name,
 }
-wandb.config.update(cfg)
+# wandb.config.update(cfg)
 
-wandb.run.name = f'{args.model_name}_{args.data_name}_ln{args.label_noise}_nc:{args.num_noised_class}_{args.img_noise}'
-wandb.run.save()
+# wandb.run.name = f'{args.model_name}_{args.data_name}_ln{args.label_noise}_nc:{args.num_noised_class}_{args.img_noise}'
+# wandb.run.save()
 
 ####################
 
@@ -86,7 +115,9 @@ std = [0.2023, 0.1994, 0.2010] if args.dataset.startswith('cifar') else [.5, .5,
 # std = [0.2470, 0.2435, 0.2616] if args.dataset.startswith('cifar') else [.5, .5, .5]
 # 이게 맞는 std 아닌가;
 
-noise_transform = transforms.Compose([gauss_noise_tensor,])
+noise_transform = transforms.Compose([
+                                gauss_noise_tensor,
+                                ])
 train_transform = transforms.Compose([transforms.RandomCrop(32, padding=4),
                                 transforms.RandomHorizontalFlip(),
                                 transforms.ToTensor(),
@@ -142,17 +173,8 @@ for k in range(1,65):
     device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
     model = model.to(device)
 
-    # train the model
-    save_path = os.path.join('runs', args.data_name, "{}_{}_k{}".format(args.model_name, int(args.label_noise*100), k))
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
-    # np.savez(os.path.join(save_path, "label_noise.npz"), index=random_index, value=random_part)
-
-    itr_index = 1
-
     cls_num_list = train_dataset.get_cls_num_list()
 
-    # train loop
     if args.train_rule == 'Reweight':
         beta = 0.9999
         effective_num = 1.0 - np.power(beta, cls_num_list)
@@ -173,6 +195,14 @@ for k in range(1,65):
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     wrapper = ModelWrapper(model, optimizer, criterion, device)
 
+    # train the model
+    # np.savez(os.path.join(data_dir, f"{k}_label_noise_{str(cfg)}.npz"), index=random_index, value=random_part)
+
+    itr_index = 1
+    sum_loss = 0
+    sum_acc = 0
+
+    # train loop
     for id_epoch in tqdm(range(args.train_epoch)):
         wrapper.train()
 
@@ -180,6 +210,8 @@ for k in range(1,65):
 
             loss, acc, _ = wrapper.train_on_batch(inputs, targets)
             itr_index += 1
+            sum_loss += loss
+            sum_acc += acc
 
         wrapper.eval()
         test_loss, test_acc = wrapper.eval_all(test_loader)
@@ -187,21 +219,35 @@ for k in range(1,65):
         print("clean: loss={}, acc={}".format(test_loss, test_acc))
         print()
 
-        state = {
+    result_train_loss = sum_loss / (len(train_loader) * args.train_epoch)
+    result_train_acc = sum_acc / (len(train_loader) * args.train_epoch)
+    result_test_loss, result_test_acc = wrapper.eval_all(test_loader)
+        
+    print(f"#### K : {k}-Evaluation ####")
+    print("epoch:{}/{}, batch:{}/{}, testing...".format(id_epoch + 1, args.train_epoch, id_batch + 1, len(train_loader)))
+    print("clean: loss={}, acc={}".format(test_loss, test_acc))
+
+    with open(f"{log_dir}/test_acc_{str(cfg)}.txt","a") as f:
+        f.write(f"{k}:{result_test_acc} , ")
+    
+    with open(f"{log_dir}/test_loss_{str(cfg)}.txt","a") as f:
+        f.write(f"{k}:{result_test_loss} , ")
+    
+    with open(f"{log_dir}/train_acc_{str(cfg)}.txt","a") as f:
+        f.write(f"{k}:{result_train_acc} , ")
+    
+    with open(f"{log_dir}/train_loss_{str(cfg)}.txt","a") as f:
+        f.write(f"{k}:{result_train_loss} , ")
+
+    state = {
             'net': model.state_dict(),
             'optim': optimizer.state_dict(),
             'acc': test_acc,
             'epoch': id_epoch,
             'itr': itr_index
         }
-        torch.save(state, os.path.join(save_path, "ckpt.pkl"))
-        # return to train state.
-        
-    result_test_loss, result_test_acc = wrapper.eval_all(test_loader)
-    print(f"#### K : {k}-Evaluation ####")
-    print("epoch:{}/{}, batch:{}/{}, testing...".format(id_epoch + 1, args.train_epoch, id_batch + 1, len(train_loader)))
-    print("clean: loss={}, acc={}".format(test_loss, test_acc))
-
+    torch.save(state, os.path.join(save_path, "ckpt.pkl"))
+    
     ###### wandb ######
-    wandb.log({"DD_test acc" : result_test_acc}, step = k)
-    wandb.log({"DD_test loss" : result_test_loss}, step = k)
+    # wandb.log({"DD_test acc" : result_test_acc}, step = k)
+    # wandb.log({"DD_test loss" : result_test_loss}, step = k)
