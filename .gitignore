@@ -2,6 +2,7 @@ dataset/
 runs/
 wandb/
 bash/
+log/
 *.log
 
 # Created by https://www.toptal.com/developers/gitignore/api/opencv,python,pycharm,visualstudiocode,windows,macos,linux,jupyternotebooks
