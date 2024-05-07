@@ -23,6 +23,8 @@ random.seed(0)
 parser = argparse.ArgumentParser()
 # dataset part
 parser.add_argument('--data_name', type=str, default='cifar10', help='Cifar10')
+parser.add_argument('--data_path', type=str, default='./data')
+parser.add_argument('--workers', default=0, type=int, metavar='N')
 parser.add_argument('--model_name', type=str, default='resnet', help='vgg16, resnet')
 parser.add_argument('--lr', type=float, default=1e-4, help='learning rate')
 parser.add_argument('--train_batch_size', type=int, default=128, help='train_batch_size')
@@ -34,12 +36,12 @@ parser.add_argument('--img_noise', type=str, default=None, help='None , Partial 
 parser.add_argument('--k', type=int, default=64, help='1 to k iteration')
 parser.add_argument('--start_k', type=int, default=1, help='k value to start')
 parser.add_argument('--end_k', type=int, default=64, help='k value to terminate')
-parser.add_argument('--is_lmbalance', type=bool, default=False, help='True, False')
 parser.add_argument('--imb_type', default="exp", type=str, help='imbalance type')
 parser.add_argument('--imb_factor', default=0.01, type=float, help='imbalance factor')
 parser.add_argument('--train_rule', default='None', type=str, choices=['None', 'Resample', 'Reweight', 'DRW'])
 parser.add_argument('--rand_number', default=0, type=int, help='fix random number for data sampling')
 parser.add_argument('--extra_name', default='imbalanced', type=str, help='(additional) name to indicate experiment')
+parser.add_argument('--gpu', default=0, type=int, help='gpu number')
 
 args = parser.parse_args()
 
@@ -70,7 +72,6 @@ cfg = {
 "label_noise": args.label_noise,
 "num_noised_class": args.num_noised_class,
 "img_noise": args.img_noise,
-"is_imbalance": args.is_imbalance,
 "imb_type": args.imb_type,
 "imb_factor": args.train_rule,
 "rand_number": args.rand_number,
@@ -98,20 +99,8 @@ def gauss_noise_tensor(img):
         
     return out
 
-# dataset = datasets.CIFAR10
-
-"""
-test_data = dataset(f'{data_dir}', train=False, transform=eval_transform)
-train_loader = torch.utils.data.DataLoader(train_data, batch_size=args.train_batch_size, shuffle=True, num_workers=0,
-                                        drop_last=False)
-noise_loader = torch.utils.data.DataLoader(noise_data, batch_size=args.train_batch_size, shuffle=False, num_workers=0,
-                                        drop_last=False)
-test_loader = torch.utils.data.DataLoader(test_data, batch_size=args.eval_batch_size, shuffle=False, num_workers=0,
-                                        drop_last=False)
-"""
-
-mean = [0.4914, 0.4822, 0.4465] if args.dataset.startswith('cifar') else [.5, .5, .5]
-std = [0.2023, 0.1994, 0.2010] if args.dataset.startswith('cifar') else [.5, .5, .5]
+mean = [0.4914, 0.4822, 0.4465] if args.data_name.startswith('cifar') else [.5, .5, .5]
+std = [0.2023, 0.1994, 0.2010] if args.data_name.startswith('cifar') else [.5, .5, .5]
 # std = [0.2470, 0.2435, 0.2616] if args.dataset.startswith('cifar') else [.5, .5, .5]
 # 이게 맞는 std 아닌가;
 
@@ -160,7 +149,7 @@ elif args.data_name == 'cifar100':
 else:
     raise NotImplementedError(f"Dataset {args.data_name} is not supported!")
 
-for k in range(1,65):
+for k in range(args.start_k, args.end_k+1):
     print(f"\nTrain K={k} Start!\n")
     if args.model_name == 'vgg16':
         model = vgg.vgg16_bn()
@@ -170,7 +159,7 @@ for k in range(1,65):
         raise Exception("No such model!")
     
     # build model
-    device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
+    device = torch.device(f'cuda:{args.gpu}' if torch.cuda.is_available() else 'cpu')
     model = model.to(device)
 
     cls_num_list = train_dataset.get_cls_num_list()
@@ -227,18 +216,19 @@ for k in range(1,65):
     print("epoch:{}/{}, batch:{}/{}, testing...".format(id_epoch + 1, args.train_epoch, id_batch + 1, len(train_loader)))
     print("clean: loss={}, acc={}".format(test_loss, test_acc))
 
-    with open(f"{log_dir}/test_acc_{str(cfg)}.txt","a") as f:
+    with open(f"{log_dir}/test_acc_{args.extra_name}.txt","a") as f:
         f.write(f"{k}:{result_test_acc} , ")
     
-    with open(f"{log_dir}/test_loss_{str(cfg)}.txt","a") as f:
+    with open(f"{log_dir}/test_loss_{args.extra_name}.txt","a") as f:
         f.write(f"{k}:{result_test_loss} , ")
     
-    with open(f"{log_dir}/train_acc_{str(cfg)}.txt","a") as f:
+    with open(f"{log_dir}/train_acc_{args.extra_name}.txt","a") as f:
         f.write(f"{k}:{result_train_acc} , ")
     
-    with open(f"{log_dir}/train_loss_{str(cfg)}.txt","a") as f:
+    with open(f"{log_dir}/train_loss_{args.extra_name}.txt","a") as f:
         f.write(f"{k}:{result_train_loss} , ")
 
+    
     state = {
             'net': model.state_dict(),
             'optim': optimizer.state_dict(),

@@ -14,15 +14,16 @@
 
 
 echo "resnet training start"
-python train_cifar10.py \
---data_name Cifar10 \
+
+python train_cifar10_imbalance.py \
+--data_name cifar10 \
 --model_name resnet \
 --train_batch_size 128 \
 --start_k 1 \
 --end_k 32 \
---is_imbalance True \
 --imb_type exp \
 --imb_factor 0.01 \
 --train_rule Resample \
 --rand_number 0 \
---extra_name imbalance
+--extra_name imbalance_resample_imb001 \
+--gpu 0
