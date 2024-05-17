@@ -41,14 +41,12 @@ parser.add_argument('--imb_factor', default=0.01, type=float, help='imbalance fa
 parser.add_argument('--train_rule', default='None', type=str, choices=['None', 'Resample', 'Reweight', 'DRW'])
 parser.add_argument('--rand_number', default=0, type=int, help='fix random number for data sampling')
 parser.add_argument('--extra_name', default='imbalanced', type=str, help='(additional) name to indicate experiment')
-parser.add_argument('--gpu', default=0, type=int, help='gpu number')
 
 args = parser.parse_args()
 
 data_dir = "./dataset"
 log_dir = "./log"
 save_path = './runs'
-# save_path = os.path.join('runs', args.data_name, "{}_{}_k{}".format(args.model_name, int(args.label_noise*100), k))
 
 if not os.path.isdir(data_dir):
     os.makedirs(data_dir)
@@ -159,26 +157,28 @@ for k in range(args.start_k, args.end_k+1):
         raise Exception("No such model!")
     
     # build model
-    device = torch.device(f'cuda:{args.gpu}' if torch.cuda.is_available() else 'cpu')
+    # device = torch.device(f'cuda:{args.gpu}' if torch.cuda.is_available() else 'cpu')
+    device = torch.device(f'cuda' if torch.cuda.is_available() else 'cpu')
     model = model.to(device)
 
     cls_num_list = train_dataset.get_cls_num_list()
 
-    if args.train_rule == 'Reweight':
-        beta = 0.9999
-        effective_num = 1.0 - np.power(beta, cls_num_list)
-        per_cls_weights = (1.0 - beta) / np.array(effective_num)
-        per_cls_weights = per_cls_weights / np.sum(per_cls_weights) * len(cls_num_list)
-        per_cls_weights = torch.FloatTensor(per_cls_weights).cuda(args.gpu)
-    elif args.train_rule == 'DRW':
-        idx = id_epoch // 160
-        betas = [0, 0.9999]
-        effective_num = 1.0 - np.power(betas[idx], cls_num_list)
-        per_cls_weights = (1.0 - betas[idx]) / np.array(effective_num)
-        per_cls_weights = per_cls_weights / np.sum(per_cls_weights) * len(cls_num_list)
-        per_cls_weights = torch.FloatTensor(per_cls_weights).cuda(args.gpu)
-    else:
-        per_cls_weights = None
+    # if args.train_rule == 'Reweight':
+    #     beta = 0.9999
+    #     effective_num = 1.0 - np.power(beta, cls_num_list)
+    #     per_cls_weights = (1.0 - beta) / np.array(effective_num)
+    #     per_cls_weights = per_cls_weights / np.sum(per_cls_weights) * len(cls_num_list)
+    #     per_cls_weights = torch.FloatTensor(per_cls_weights).cuda(args.gpu)
+    # elif args.train_rule == 'DRW':
+    #     idx = id_epoch // 160
+    #     betas = [0, 0.9999]
+    #     effective_num = 1.0 - np.power(betas[idx], cls_num_list)
+    #     per_cls_weights = (1.0 - betas[idx]) / np.array(effective_num)
+    #     per_cls_weights = per_cls_weights / np.sum(per_cls_weights) * len(cls_num_list)
+    #     per_cls_weights = torch.FloatTensor(per_cls_weights).cuda(args.gpu)
+    # else:
+    #     per_cls_weights = None
+    per_cls_weights = None
 
     criterion = torch.nn.CrossEntropyLoss(weight=per_cls_weights)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
@@ -215,6 +215,7 @@ for k in range(args.start_k, args.end_k+1):
     print(f"#### K : {k}-Evaluation ####")
     print("epoch:{}/{}, batch:{}/{}, testing...".format(id_epoch + 1, args.train_epoch, id_batch + 1, len(train_loader)))
     print("clean: loss={}, acc={}".format(test_loss, test_acc))
+    print()
 
     with open(f"{log_dir}/test_acc_{args.extra_name}.txt","a") as f:
         f.write(f"{k}:{result_test_acc} , ")

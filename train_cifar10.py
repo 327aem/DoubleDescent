@@ -221,15 +221,17 @@ for k in range(args.start_k, args.end_k+1):
         # return to train state.
         wrapper.train()
 
+    print("Train Finished")
+    
     result_train_loss = sum_loss / (len(train_loader) * args.train_epoch)
     result_train_acc = sum_acc / (len(train_loader) * args.train_epoch)
     result_test_loss, result_test_acc = wrapper.eval_all(test_loader)
     result_noise_loss, result_noise_acc = wrapper.eval_all(noise_loader)
 
     print(f"#### K : {k}-Evaluation ####")
-    print("epoch:{}/{}, batch:{}/{}, testing...".format(id_epoch + 1, args.train_epoch, id_batch + 1, len(train_loader)))
-    print("clean: loss={}, acc={}".format(test_loss, test_acc))
-    print("noise: loss={}, acc={}".format(noise_loss, noise_acc))
+    print("train: train_loss={}, train_acc={}".format(result_train_loss, result_train_acc))
+    print("test(clean): test_loss={}, test_acc={}".format(result_test_loss, result_test_acc))
+    print("test(noise): noise_loss={}, noise_acc={}".format(result_noise_loss, result_noise_acc))
 
     # ###### wandb ######
     # wandb.log({"DD_test acc" : result_test_acc}, step = k)
