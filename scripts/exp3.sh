@@ -1,17 +1,19 @@
 #!/bin/bash
-
+echo 1
 masterK=64
-numGPU=$4
-chmod 755 /home/donggeonlee/repo/DoubleDescent/train_cifar10.py
+numGPU=$1
 
-cd /home/donggeonlee/repo/DoubleDescent
+chmod 755 /home/dhkim0317/DoubleDescent
+chmod 755 /home/dhkim0317/DoubleDescent/train_cifar10_imbalance.py
+
+echo 2
+cd /home/dhkim0317/DoubleDescent
 echo Current Path :
 pwd
 
 for ((k=$masterK;k>=1;k--))
 do
     touch resample001-k_$masterk.log
-    cat /dev/null > resample001-k_$masterk.log
 
     echo K: $k - Start Code
 
@@ -23,9 +25,9 @@ do
         --end_k $k \
         --imb_type exp \
         --imb_factor 0.01 \
-        --train_rule Resample \
         --rand_number 0 \
-        --extra_name imbalance_resample_imb001 > resample001-k_$masterk.log 2>&1 &
+        --train_rule Resample \
+	--extra_name imbalance_resample_imb001 > resample001-k_$masterk.log 2>&1 &
     # echo End Code
 
 done
