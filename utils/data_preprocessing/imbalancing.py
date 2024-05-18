@@ -20,21 +20,6 @@ class ImbalanceCIFAR10(torchvision.datasets.CIFAR10):
         img_max = len(self.data) / cls_num
         img_num_per_cls = []
 
-        """
-        cls_num 10
-
-        exp일 때
-        imb_factor**(0/9) = 1
-        imb_factor**(1/9) = 0.60
-        ...
-        imb_factor**(1) = 0.01
-
-        step일 때
-        절반은 그대로, 절반은 0.01배 곱한 만큼만? 뭐 이런 방법이
-
-        else
-        self.data 개수만큼
-        """
         if imb_type == 'exp':
             for cls_idx in range(cls_num):
                 num = img_max * (imb_factor**(cls_idx / (cls_num - 1.0)))
@@ -199,7 +184,7 @@ if __name__ == '__main__':
         [transforms.ToTensor(),
          transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
     )
-    trainset = SemiSupervisedImbalanceCIFAR10(root='./data', train=True,
+    trainset = SemiSupervisedImbalanceCIFAR10(root='./dataset', train=True,
                                               download=True, transform=transform)
     trainloader = iter(trainset)
     data, label = next(trainloader)
