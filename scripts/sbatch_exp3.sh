@@ -1,8 +1,8 @@
 #!/bin/sh
 
 #SBATCH -J DDD-imbalanced
-#SBATCH -o /home/dhkim0317/DoubleDescent/scripts/sbatch_exp3_1.log # TO BE EDITED
-#SBATCH -e /home/dhkim0317/DoubleDescent/scripts/sbatch_exp_3_1_error.log
+#SBATCH -o /home/dhkim0317/DoubleDescent/scripts/log_sbatch_exp3_1.log # TO BE EDITED
+#SBATCH -e /home/dhkim0317/DoubleDescent/scripts/log_sbatch_exp3_1_error.log
 #SBATCH --time 1-00:00:00
 
 #SBATCH -p titanxp 
