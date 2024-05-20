@@ -1,13 +1,11 @@
 #!/bin/bash
-echo 1
-masterK=64
+masterK=4
 numGPU=$1
 
-chmod 755 /home/donggeonlee/repo/ImbalanceDDD
-chmod 755 /home/donggeonlee/repo/ImbalanceDDD/train_cifar10_imbalance.py
+chmod 755 /home/dhkim0317/DoubleDescent
+chmod 755 /home/dhkim0317/DoubleDescent/train_cifar10_imbalance.py
 
-echo 2
-cd /home/donggeonlee/repo/ImbalanceDDD
+cd /home/dhkim0317/DoubleDescent
 echo Current Path :
 pwd
 
