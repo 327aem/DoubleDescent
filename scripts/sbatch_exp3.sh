@@ -3,7 +3,7 @@
 #SBATCH -J DDD-imbalanced
 #SBATCH -o /home/dhkim0317/DoubleDescent/scripts/log_sbatch_exp3_1.log # TO BE EDITED
 #SBATCH -e /home/dhkim0317/DoubleDescent/scripts/log_sbatch_exp3_1_error.log
-#SBATCH --time 3-00:00:00
+#SBATCH --time 1-12:00:00
 
 #SBATCH -p A100-80GB 
 #SBATCH --gres=gpu:3

@@ -11,8 +11,8 @@ pwd
 
 for ((k=$masterK;k>=1;k--))
 do
-    touch ./logtemp/none001-k_$k.log
-    cat /dev/null > ./logtemp/none001-k_$k.log
+    touch ./logtemp/step_none001-k_$k.log
+    cat /dev/null > ./logtemp/step_none001-k_$k.log
 
     echo K: $k - Start Code on device $(($k % $numGPU))
 
@@ -22,13 +22,13 @@ do
         --train_batch_size 128 \
         --start_k $k \
         --end_k $k \
-        --imb_type exp \
+        --imb_type step \
         --imb_factor 0.01 \
         --rand_number 0 \
         --train_rule None \
-	--extra_name none_resample_imb001 > ./logtemp/none001-k_$k.log 2>&1 &
+	--extra_name step_none_imb001 > ./logtemp/step_none001-k_$k.log 2>&1 &
     # echo End Code
 
 done
 
-tail -f ./logtemp/none001-k_$masterK.log
+tail -f ./logtemp/step_none001-k_$masterK.log
