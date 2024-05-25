@@ -3,10 +3,10 @@
 #SBATCH -J DDD-imbalanced-step-resample
 #SBATCH -o /home/dhkim0317/DoubleDescent/scripts/log_sbatch_exp3_3.log # TO BE EDITED
 #SBATCH -e /home/dhkim0317/DoubleDescent/scripts/log_sbatch_exp3_3_error.log
-#SBATCH --time 1-12:00:00
+#SBATCH --time 3-00:00:00
 
 #SBATCH -p A100-80GB 
-#SBATCH --gres=gpu:3
+#SBATCH --gres=gpu:4
 
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -15,7 +15,7 @@
 
 #SBATCH --comment ImbalDDDstepresample
 
-numGPU=3 # TO BE EDITED
+numGPU=4 # TO BE EDITED
 
 echo "numGPU $numGPU"
 

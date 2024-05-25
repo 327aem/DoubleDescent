@@ -1,6 +1,6 @@
 #!/bin/bash
 masterK=64
-numGPU=3
+numGPU=4
 
 chmod 755 /home/dhkim0317/DoubleDescent
 chmod 755 /home/dhkim0317/DoubleDescent/train_cifar10_imbalance.py
@@ -11,8 +11,8 @@ pwd
 
 for ((k=$masterK;k>=1;k--))
 do
-    touch ./logtemp/step_none001-k_$k.log
-    cat /dev/null > ./logtemp/step_none001-k_$k.log
+    touch ./logtemp/step_none2001-k_$k.log
+    cat /dev/null > ./logtemp/step_none2001-k_$k.log
 
     echo K: $k - Start Code on device $(($k % $numGPU))
 
@@ -26,9 +26,9 @@ do
         --imb_factor 0.01 \
         --rand_number 0 \
         --train_rule None \
-	--extra_name step_none_imb001 > ./logtemp/step_none001-k_$k.log 2>&1 &
+	--extra_name step_none2_imb001 > ./logtemp/step_none2001-k_$k.log 2>&1 &
     # echo End Code
 
 done
 
-tail -f ./logtemp/step_none001-k_$masterK.log
+tail -f ./logtemp/step_none2001-k_$masterK.log

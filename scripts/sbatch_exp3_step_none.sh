@@ -1,21 +1,21 @@
 #!/bin/sh
 
-#SBATCH -J DDD-imbalanced-step-none
-#SBATCH -o /home/dhkim0317/DoubleDescent/scripts/log_sbatch_exp3_2.log # TO BE EDITED
-#SBATCH -e /home/dhkim0317/DoubleDescent/scripts/log_sbatch_exp3_2_error.log
-#SBATCH --time 1-12:00:00
+#SBATCH -J DDD-imbalanced-step-none2
+#SBATCH -o /home/dhkim0317/DoubleDescent/scripts/log_sbatch_exp3_4.log # TO BE EDITED
+#SBATCH -e /home/dhkim0317/DoubleDescent/scripts/log_sbatch_exp3_4_error.log
+#SBATCH --time 3-00:00:00
 
 #SBATCH -p A100-80GB 
-#SBATCH --gres=gpu:3
+#SBATCH --gres=gpu:4
 
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --tasks-per-node=1
 #SBATCH --cpus-per-task=16
 
-#SBATCH --comment ImbalDDDstepnone
+#SBATCH --comment ImbalDDDstepnone2
 
-numGPU=3 # TO BE EDITED
+numGPU=4 # TO BE EDITED
 
 echo "numGPU $numGPU"
 

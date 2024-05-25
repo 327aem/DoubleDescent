@@ -1,6 +1,6 @@
 #!/bin/bash
 masterK=64
-numGPU=3
+numGPU=4
 
 chmod 755 /home/dhkim0317/DoubleDescent
 chmod 755 /home/dhkim0317/DoubleDescent/train_cifar10_imbalance.py
