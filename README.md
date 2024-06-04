@@ -5,7 +5,7 @@ Usage
 ```python
 python train_cifar10.py \
   --data_name Cifar10 \
-  --model_name vgg16 \ # vgg16 / resnet 
+  --model_name resnet  \
   --label_noise 0.15 \
   --num_noised_class 10 \
   --start_k 1 \ # k value to start experiment
@@ -15,14 +15,8 @@ python train_cifar10.py \
 ```
 
 ## Environmental
-
 - Python >= 3.9
 
-## Train Dataset 
-+ label noised CIFAR10
-
-## Test Loss / Acc 
-+ original test set 
-
-## Noise Loss / Acc 
-+ noised test set
+## References
+- [ZhangXiao96/Deep-Double-Descent](https://github.com/ZhangXiao96/Deep-Double-Descent/)
+- [YyzHarry/imbalanced-semi-self](https://github.com/YyzHarry/imbalanced-semi-self/blob/master/dataset/imbalance_cifar.py)
